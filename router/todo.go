@@ -1,21 +1,47 @@
 package router
 
 import (
+	"log"
 	"net/http"
+	"strconv"
 
+	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 	"github.com/hellojukay/todo-server/models"
 )
 
 func TodoList(w http.ResponseWriter, r *http.Request) {
-	var todo = models.ToDo{
-		Title:       "一个事情",
-		Description: "这里是描述信息，非常的长",
+	var task = models.ListAllTasks()
+	render.JSON(w, r, task)
+}
+
+func AddTodo(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	var title = r.FormValue("title")
+	log.Printf("新任务: %s", title)
+	task, err := models.SaveTask(models.Task{
+		Title: title,
+	})
+	if err != nil {
+		log.Printf("无法创建任务 %s ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-	var todoList []models.ToDo
-	for i := 0; i < 100; i++ {
-		todo.ID = int64(i)
-		todoList = append(todoList, todo)
+	render.JSON(w, r, task)
+
+}
+
+func DeleteTodo(w http.ResponseWriter, r *http.Request) {
+	var _id = chi.URLParam(r, "taskID")
+	id, err := strconv.ParseInt(_id, 10, 64)
+	if err != nil {
+		log.Printf("非法任务编号 %s %s ", _id, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-	render.JSON(w, r, todoList)
+	if err = models.RemoveTask(id); err != nil {
+		log.Printf("无法删除任务 %d,数据库错误  %s ", id, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
