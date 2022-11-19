@@ -30,6 +30,7 @@ func main() {
 	r.Get("/todo/", router.TodoList)
 	r.Post("/todo/", router.AddTodo)
 	r.Delete("/todo/{taskID}", router.DeleteTodo)
+	r.Put("/todo/{taskID}", router.UpdateTodo)
 
 	log.Print("server startup at http://localhost:5000")
 	http.ListenAndServe(":5000", r)

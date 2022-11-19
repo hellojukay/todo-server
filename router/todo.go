@@ -1,6 +1,7 @@
 package router
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -12,7 +13,10 @@ import (
 )
 
 func TodoList(w http.ResponseWriter, r *http.Request) {
-	var task = models.ListAllTasks()
+	_finished := r.URL.Query().Get("finished")
+	finished, _ := strconv.ParseBool(_finished)
+
+	var task = models.ListAllTasks(finished)
 	render.JSON(w, r, task)
 }
 
@@ -42,6 +46,26 @@ func DeleteTodo(w http.ResponseWriter, r *http.Request) {
 	}
 	if err = models.RemoveTask(id); err != nil {
 		log.Printf("无法删除任务 %d,数据库错误  %s ", id, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
+func UpdateTodo(w http.ResponseWriter, r *http.Request) {
+	var _id = chi.URLParam(r, "taskID")
+	id, err := strconv.ParseInt(_id, 10, 64)
+	if err != nil {
+		log.Printf("非法任务编号 %s %s ", _id, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer r.Body.Close()
+	var task models.Task
+	json.NewDecoder(r.Body).Decode(&task)
+	log.Print("更新任务 ", task.Title, task.Finished)
+	task.ID = id
+	if err = models.UpdateTask(task); err != nil {
+		log.Printf("无法更新任务 %d,数据库错误  %s ", id, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
